@@ -1,6 +1,6 @@
 {
   "name": "in2-express-util",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "utils for express.js",
   "main": "index.js",
   "scripts": {
