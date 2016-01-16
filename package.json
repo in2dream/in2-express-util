@@ -1,0 +1,24 @@
+{
+  "name": "in2-express-util",
+  "version": "0.1.0",
+  "description": "utils for express.js",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/in2dream/in2-express-util.git"
+  },
+  "keywords": [
+    "express.js",
+    "helper",
+    "util"
+  ],
+  "author": "in2dream",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/in2dream/in2-express-util/issues"
+  },
+  "homepage": "https://github.com/in2dream/in2-express-util#readme"
+}
