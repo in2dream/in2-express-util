@@ -2,10 +2,28 @@
 var async = require('async');
 var in2Util = require('../index');
 var should = require('should');
+var util = require('util');
+var testApp;
+var appSession = {};
+
+function runMiddlewareTest(middleware, config, done) {
+    if (typeof(config) == 'function') {
+        done = config;
+        config = {};
+    }
+    testApp.reset();
+    testApp.use(in2Util.reqUtil(config));
+    if (util.isArray(middleware)) {
+        middleware.forEach(function(m){
+            testApp.use(m);
+        });
+    } else {
+        testApp.use(middleware);
+    }
+    testApp.run(done);
+}
 
 module.exports = function() {
-
-    var testApp;
     before(function(done){
         testApp = {
             middleware : [],
@@ -19,14 +37,18 @@ module.exports = function() {
                     m(self.req, self.res, done);
                 }, function(err) {
                     if (err) return callback(err);
+                    appSession = self.req.session;
                     return callback();
                 });
             },
             reset: function() {
                 this.middleware = [];
+                this.req = util._extend({}, this._req);
+                this.res = util._extend({}, this._res);
+                this.req.session = appSession || {};
             },
-            req: {
-                session: {},
+            _req: {
+                session: appSession,
                 protocol: 'http',
                 originalUrl: '/test/index.html?foo=bar',
                 data: {
@@ -36,37 +58,61 @@ module.exports = function() {
                     return this.data[key] || null;
                 }
             },
-            res: {
+            _res: {
             },
         }
         done();
     });
 
-    // req.protocol + "://" + req.get('host') + req.originalUrl
     it('::currentUrl()', function(done){
-        testApp.reset();
-        testApp.use(in2Util.reqUtil());
-        testApp.use(function(req, res, next){
+        runMiddlewareTest(function(req, res, next){
             req.currentUrl().should.be.exactly('http://test.com/test/index.html?foo=bar');
             return next();
-        });
-        testApp.run(done);
+        }, done);
     });
 
     it('::notice()', function(done){
-        testApp.reset();
-        testApp.use(in2Util.reqUtil());
-        testApp.use(function(req, res, next){
-            (req.notice() == null).should.be.true();
-            req.notice('notice some thing');
-            req.session.flash.notice.should.be.exactly('notice some thing');
-            var msg = req.notice();
-            msg.should.be.exactly('notice some thing');
-            (req.session.flash.notice == null).should.be.true();
+        appSession = {};
+        var count = 0;
+        runMiddlewareTest(function(req, res, next){
+            if (count == 0) {
+                (req.notice() === null).should.be.true();
+                req.notice('notice some thing');
+                req.session.flash.notice.should.be.exactly('notice some thing');
+                var msg = req.notice();
+                msg.should.be.exactly('notice some thing');
+            }
+            count++;
             return next();
+        }, function(){
+            testApp.run(function(){
+                testApp.use(function(req, res, next){
+                    (req.notice() == null).should.be.true();
+                    return next();
+                });
+                testApp.run(done);
+            });
         });
-        testApp.run(done);
     });
 
-
+    it('::notice() export notice to views', function(done){
+        var count = 0;
+        runMiddlewareTest(function(req, res, next){
+            if (count == 0) {
+                req.notice('some message');
+            }
+            count++;
+            return next();
+        }, {
+            exports: {
+                notice: 'myNotice'
+            } 
+        }, function(){
+            testApp.use(function(req, res, next) {
+                res.locals.myNotice.should.be.exactly('some message');
+                return next();
+            });
+            testApp.run(done);
+        });
+    });
 };
